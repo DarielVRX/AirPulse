@@ -21,11 +21,22 @@
          listener con esa tasa lanza SecurityException y crashea la app
          al abrir (visto en pruebas reales). El motor de deteccion fue
          calibrado con datos del Poco M7 4G a ~400-460Hz, pero esa era la
-         tasa que el logger entregaba SIN este permiso - el hardware
+         tasa que el logger entregaba SIN este permiso; el hardware
          real soporta mas, y preferimos no perder resolucion disponible
          en el dispositivo en vez de limitarla artificialmente a un valor
          fijo en codigo. -->
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
+
+    <!-- Solo necesario en API 26-28 (maxSdkVersion=28): el logger de
+         sesiones de Play (PlaySessionLogger) usa MediaStore.Downloads en
+         API 29+ (Q, scoped storage), que no requiere este permiso. Para el
+         fallback legacy en versiones mas viejas (minSdk=26) si hace falta
+         para escribir directo en la carpeta publica de Descargas. En API
+         29+ el sistema ignora este permiso por el maxSdkVersion, asi que
+         no se pide ningun dialogo de runtime en dispositivos modernos. -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
 
     <application
         android:allowBackup="true"
