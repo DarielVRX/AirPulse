@@ -4,6 +4,17 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
     }
+    // Las versiones de los plugins de Android/Kotlin se declaran aqui
+    // (resueltas por pluginManagement) y el build.gradle raiz las aplica
+    // con "apply false" sin repetir version. El build.gradle raiz ya
+    // traia las versiones en su propio bloque plugins{}, pero sin esta
+    // declaracion aqui, pluginManagement no sabe donde/como resolver
+    // "com.android.application" como ID de plugin, y Gradle fallaba con
+    // "Plugin [id: 'com.android.application'] was not found".
+    plugins {
+        id 'com.android.application' version '8.2.2' apply false
+        id 'org.jetbrains.kotlin.android' version '1.9.22' apply false
+    }
 }
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
