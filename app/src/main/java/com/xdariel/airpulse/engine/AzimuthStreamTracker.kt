@@ -41,9 +41,12 @@ import kotlin.math.abs
  *    una derivada real de 0 instantanea -- hay que mirar un salto minimo
  *    de tiempo para que la diferencia sea significativa).
  * 3. Al confirmarse un nuevo hit (señal externa: el motor de golpes avisa
- *    "hit confirmado en t_hit"), se reporta el mejor candidato de azimuth
- *    acumulado desde el hit anterior (el de menor derivada visto en ese
- *    tramo), y se reinicia la acumulacion para el proximo tramo.
+ *    "hit confirmado en t_hit"), se reporta el candidato de menor derivada
+ *    entre los vistos en los ultimos [AZIMUTH_LOOKBACK_MS] antes de ese
+ *    instante (NO todo el tramo desde el hit anterior: en Play el usuario
+ *    puede tardar en moverse a la proxima pieza, y mesetas de transito
+ *    lejanas en el tiempo no representan la posicion del proximo golpe),
+ *    y se reinicia la acumulacion para el proximo tramo.
  *
  * Manejo circular: el azimuth es circular (-180..+180 grados, o 0..360
  * segun convencion). Las diferencias usadas para la derivada se calculan
@@ -76,6 +79,17 @@ class AzimuthStreamTracker {
         // minimo de derivada mas algo de margen, sin crecer sin limite.
         private const val AZIMUTH_BUF_CAPACITY = 60
         private const val ACCEL_WINDOW_BUF_CAPACITY = ATTACK_WINDOW_SIZE + 2
+
+        // BUG FIX: el candidato "mas plano" se buscaba sobre TODO el tramo
+        // desde el hit anterior, sin limite de tiempo. En Play, entre un
+        // golpe y el siguiente el usuario mueve el brazo a otra posicion
+        // (otra pieza); ese transito puede incluir mesetas espurias (fuera
+        // de fase de ataque segun el filtro) que compiten -y a veces ganan-
+        // contra la meseta real justo antes del proximo golpe, reportando
+        // la posicion de una pieza distinta. Se limita la busqueda a los
+        // ultimos AZIMUTH_LOOKBACK_MS antes del momento de reporte, misma
+        // magnitud que SLOPE_FILTER_WINDOW_MS del motor de golpes.
+        const val AZIMUTH_LOOKBACK_MS = 150L
     }
 
     private data class Sample(val t: Long, val v: Double)
@@ -86,7 +100,10 @@ class AzimuthStreamTracker {
     private val accelWindow = ArrayDeque<Sample>()   // ultimas N muestras de accel_x (con signo) para detectar fase de ataque
     private val azimuthBuf = ArrayDeque<Sample>()    // ultimas muestras de azimuth, para calcular la derivada corta
 
-    private var bestCandidate: Candidate? = null
+    // ahora se guardan TODOS los candidatos vistos en el tramo (no solo el
+    // mejor global), para poder filtrar por tiempo al momento de reportar
+    // (ver AZIMUTH_LOOKBACK_MS). La lista se acota igual que azimuthBuf.
+    private val candidates = ArrayDeque<Candidate>()
 
     /** Azimuth reportado para el ultimo tramo cerrado (consumido por quien llama a [onHitConfirmed]). */
     var lastReportedAzimuth: Double? = null
@@ -138,7 +155,7 @@ class AzimuthStreamTracker {
      * Busca, entre las muestras separadas por al menos
      * [MIN_DERIVATIVE_GAP_MS] de la muestra actual, la derivada corta
      * suavizada (|diferencia angular| / dt) y, si es la mas chica vista en
-     * este tramo, actualiza [bestCandidate].
+     * este tramo, lo agrega a [candidates].
      */
     private fun updateFlattestCandidate(currentT: Long, currentAzimuth: Double) {
         // buscar la muestra mas reciente que este al menos
@@ -159,9 +176,15 @@ class AzimuthStreamTracker {
         val diff = abs(circularDiff(currentAzimuth, reference.v))
         val derivative = diff / dt
 
-        val current = bestCandidate
-        if (current == null || derivative < current.derivative) {
-            bestCandidate = Candidate(azimuth = currentAzimuth, derivative = derivative, t = currentT)
+        pushBounded(candidates, AZIMUTH_BUF_CAPACITY, Candidate(azimuth = currentAzimuth, derivative = derivative, t = currentT))
+    }
+
+    // sobrecarga generica de pushBounded para la lista de candidatos (no
+    // son Sample, reutilizamos la misma logica de tope de capacidad).
+    private fun <T> pushBounded(buf: ArrayDeque<T>, capacity: Int, item: T) {
+        buf.addLast(item)
+        while (buf.size > capacity) {
+            buf.removeFirst()
         }
     }
 
@@ -194,10 +217,14 @@ class AzimuthStreamTracker {
      * borde improbable pero posible con gestos muy rapidos), y reinicia la
      * acumulacion para el proximo tramo.
      */
-    fun onHitConfirmed(): Double? {
-        val azimuth = bestCandidate?.azimuth
+    fun onHitConfirmed(hitT: Long): Double? {
+        // solo candidatos dentro de AZIMUTH_LOOKBACK_MS antes del hit (ver
+        // comentario en companion object): descarta mesetas de transito
+        // lejanas en el tiempo, que no representan la posicion de este golpe.
+        val inWindow = candidates.filter { hitT - it.t <= AZIMUTH_LOOKBACK_MS }
+        val azimuth = inWindow.minByOrNull { it.derivative }?.azimuth
         lastReportedAzimuth = azimuth
-        bestCandidate = null
+        candidates.clear()
         return azimuth
     }
 
@@ -205,7 +232,7 @@ class AzimuthStreamTracker {
     fun reset() {
         accelWindow.clear()
         azimuthBuf.clear()
-        bestCandidate = null
+        candidates.clear()
         lastReportedAzimuth = null
     }
 }
