@@ -86,7 +86,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         currentRolls.clear()
         currentAzimuths.clear()
         hitsForCurrentPiece = 0
-        detector.reset()
+        // NO se llama detector.reset() aqui: eso borraria lastHit del motor
+        // de golpes justo en la transicion entre piezas, que es donde mas
+        // falta hace el filtro anti-rebote (el golpe de cierre de una pieza
+        // suele ser mas fuerte y es cuando mas probable es un rebote fisico
+        // real). Sin lastHit, el primer candidato tras el reset se confirma
+        // sin pasar por el filtro (ver StreamingAirdrumEngine.onFrame: rama
+        // "prev == null"), generando un golpe fantasma contado para la
+        // pieza siguiente. El motor de golpes sigue vivo entre piezas; solo
+        // se reinicia de verdad al volver a Setup (ver restartToSetup()).
     }
 
     /** Llamado desde CalibrationScreen por cada golpe detectado en vivo. */
