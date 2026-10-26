@@ -1,10 +1,11 @@
 package com.xdariel.airpulse.ui
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -30,7 +31,7 @@ fun SetupScreen(
         Text(text = "AirPulse - Elegi tus piezas")
         Text(text = "(Kick y pedal de hi-hat no estan disponibles: se tocan con el pie, no con un golpe en el aire)")
 
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(top = 12.dp)) {
+        LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth().padding(top = 12.dp)) {
             items(DrumPiece.values().toList()) { piece ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -46,8 +47,7 @@ fun SetupScreen(
         }
 
         Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Bottom,
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Text(text = "Seleccionadas: ${selectedPieces.size}")
             Button(
