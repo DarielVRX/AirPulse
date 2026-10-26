@@ -14,6 +14,19 @@
         android:name="android.hardware.sensor.accelerometer"
         android:required="true" />
 
+    <!-- Permiso NORMAL (se concede automaticamente al instalar, sin
+         dialogo de runtime) requerido desde Android 12 (API 31) para
+         pedir sensores a la tasa mas rapida sin limite (SENSOR_DELAY_
+         FASTEST / "0 microsegundos" de delay). Sin esto, registrar un
+         listener con esa tasa lanza SecurityException y crashea la app
+         al abrir (visto en pruebas reales). El motor de deteccion fue
+         calibrado con datos del Poco M7 4G a ~400-460Hz, pero esa era la
+         tasa que el logger entregaba SIN este permiso -- el hardware
+         real soporta mas, y preferimos no perder resolucion disponible
+         en el dispositivo en vez de limitarla artificialmente a un valor
+         fijo en codigo. -->
+    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
