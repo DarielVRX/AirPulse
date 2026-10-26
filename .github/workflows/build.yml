@@ -21,16 +21,24 @@ jobs:
           java-version: '17'
 
       - name: Set up Android SDK
+        # El input "packages" de esta accion instala por defecto
+        # 'tools platform-tools' (ver su propio action.yml). "tools" es el
+        # paquete legacy (android-sdk-tools) que Google ya retiro del
+        # repositorio, y la accion falla en ESTE MISMO STEP con
+        # "Failed to find package 'tools'" antes de llegar a ningun step
+        # posterior -- no alcanza con instalar los paquetes correctos
+        # despues, hay que evitar que esta accion intente instalar "tools"
+        # en absoluto. packages: '' le dice que no instale nada por
+        # defecto; el step siguiente instala explicitamente solo lo que
+        # hace falta.
         uses: android-actions/setup-android@v3
+        with:
+          packages: ''
 
       - name: Install required SDK packages
-        # android-actions/setup-android@v3 instala por defecto el paquete
-        # legacy "tools" (android-sdk-tools), que Google ya retiro del
-        # repositorio y hace fallar el step anterior con
-        # "Failed to find package 'tools'". Se instalan aqui solo los
-        # paquetes que realmente hacen falta para compilar (platform-tools,
+        # Paquetes que realmente hacen falta para compilar: platform-tools,
         # la platform del compileSdk declarado en app/build.gradle, y una
-        # build-tools compatible), sin tocar "tools".
+        # build-tools compatible.
         run: |
           yes | sdkmanager --licenses || true
           sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
