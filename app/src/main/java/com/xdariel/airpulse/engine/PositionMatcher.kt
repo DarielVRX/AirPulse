@@ -81,4 +81,34 @@ object PositionMatcher {
         }
         return best
     }
+
+    /** Distancia minima entre dos centros calibrados para no considerarse "solapados". */
+    const val MIN_SEPARATION_DEG = 30.0
+
+    /**
+     * Distancia entre dos posiciones calibradas (mismo calculo que
+     * [distance], pero entre dos centros ya calibrados en vez de un
+     * hit vs. un centro).
+     */
+    fun distanceBetween(a: CalibratedPosition, b: CalibratedPosition): Double =
+        distance(a.centerRoll, a.centerAzimuth, b)
+
+    /**
+     * Entre las posiciones ya calibradas en [positions], devuelve la mas
+     * cercana a [candidate] si su distancia es menor a [MIN_SEPARATION_DEG]
+     * (es decir, la posicion con la que "solaparia"), o null si [candidate]
+     * esta suficientemente separada de todas.
+     */
+    fun findConflict(candidate: CalibratedPosition, positions: List<CalibratedPosition>): CalibratedPosition? {
+        var closest: CalibratedPosition? = null
+        var closestDist = Double.MAX_VALUE
+        for (pos in positions) {
+            val d = distanceBetween(candidate, pos)
+            if (d < closestDist) {
+                closestDist = d
+                closest = pos
+            }
+        }
+        return if (closest != null && closestDist < MIN_SEPARATION_DEG) closest else null
+    }
 }
