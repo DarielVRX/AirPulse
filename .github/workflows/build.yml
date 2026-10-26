@@ -13,10 +13,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: DEBUG mostrar app/build.gradle
-        run: cat -A app/build.gradle | head -20
-
+        
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -48,9 +45,6 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
-
-      - name: DEBUG diagnostico de tareas
-        run: ./gradlew tasks --all --stacktrace
 
       - name: Run unit tests (motor de deteccion)
         run: ./gradlew test --stacktrace
