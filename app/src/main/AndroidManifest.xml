@@ -21,7 +21,7 @@
          listener con esa tasa lanza SecurityException y crashea la app
          al abrir (visto en pruebas reales). El motor de deteccion fue
          calibrado con datos del Poco M7 4G a ~400-460Hz, pero esa era la
-         tasa que el logger entregaba SIN este permiso -- el hardware
+         tasa que el logger entregaba SIN este permiso - el hardware
          real soporta mas, y preferimos no perder resolucion disponible
          en el dispositivo en vez de limitarla artificialmente a un valor
          fijo en codigo. -->
