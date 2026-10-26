@@ -23,6 +23,7 @@ fun AirPulseApp(viewModel: AppViewModel = viewModel()) {
             hitsRequired = AppViewModel.HITS_PER_PIECE_CALIBRATION,
             pieceIndex = viewModel.calibrationIndex,
             totalPieces = viewModel.calibrationQueue.size,
+            conflictWithPiece = viewModel.conflictWithPiece,
         )
 
         AppScreen.PLAY -> PlayScreen(
