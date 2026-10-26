@@ -31,7 +31,7 @@ class AirPulseDetector(
 
     init {
         engine.onHitClassified = { classified ->
-            val azimuth = azimuthTracker.onHitConfirmed()
+            val azimuth = azimuthTracker.onHitConfirmed(classified.tHit)
             onPositionedHit?.invoke(
                 PositionedHit(
                     tHit = classified.tHit,
