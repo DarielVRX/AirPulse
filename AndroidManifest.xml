@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Accelerometer and rotation vector are "normal" sensors: no runtime
+         permission is required to read them on Android. We only declare the
+         hardware feature requirement so the Play Store / package manager can
+         filter out devices without an accelerometer. Rotation vector is a
+         software/fused sensor on many devices (composed from accelerometer +
+         magnetometer/gyroscope), so we do not mark it as a required feature:
+         some devices without a magnetometer still synthesize a rotation
+         vector from gyroscope + accelerometer, and we don't want to
+         needlessly exclude those devices from the Play Store listing. -->
+    <uses-feature
+        android:name="android.hardware.sensor.accelerometer"
+        android:required="true" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.AirPulse">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>
