@@ -15,6 +15,7 @@ fun AirPulseApp(viewModel: AppViewModel = viewModel()) {
             selectedPieces = viewModel.selectedPieces,
             onTogglePiece = viewModel::togglePiece,
             onContinue = viewModel::confirmSetupAndGoToCalibration,
+            lastExportedLogPath = viewModel.lastExportedLogPath,
         )
 
         AppScreen.CALIBRATION -> CalibrationScreen(

@@ -25,10 +25,15 @@ fun SetupScreen(
     selectedPieces: Set<DrumPiece>,
     onTogglePiece: (DrumPiece) -> Unit,
     onContinue: () -> Unit,
+    lastExportedLogPath: String? = null,
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text(text = "AirPulse - Elegi tus piezas")
         Text(text = "(Kick y pedal de hi-hat no estan disponibles: se tocan con el pie, no con un golpe en el aire)")
+
+        if (lastExportedLogPath != null) {
+            Text(text = "Log de la sesion anterior guardado en: $lastExportedLogPath")
+        }
 
         LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth().padding(top = 12.dp)) {
             items(DrumPiece.values().toList()) { piece ->

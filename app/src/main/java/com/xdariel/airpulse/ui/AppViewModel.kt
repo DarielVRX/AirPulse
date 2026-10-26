@@ -10,6 +10,7 @@ import com.xdariel.airpulse.engine.AirPulseDetector
 import com.xdariel.airpulse.engine.CalibratedPosition
 import com.xdariel.airpulse.engine.DrumPiece
 import com.xdariel.airpulse.engine.PositionMatcher
+import com.xdariel.airpulse.logging.PlaySessionLogger
 import com.xdariel.airpulse.sensors.AirPulseSensorListener
 
 /**
@@ -149,7 +150,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
             calibrationIndex += 1
             if (calibrationIndex >= calibrationQueue.size) {
-                screen = AppScreen.PLAY
+                startPlaySession()
             } else {
                 startCalibrationForCurrentPiece()
             }
@@ -162,16 +163,48 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private var playHitCounter = 0
 
+    /**
+     * Log de diagnostico de la sesion de Play actual: timestamp_ms,
+     * accel_x, roll, azimuth, pieza_sonada (solo en frames de hit). Se
+     * exporta automaticamente a Descargas/airpulse-logger/ al salir de
+     * Play (ver [restartToSetup]), con nombre unico por timestamp. Pensado
+     * para comparar, offline, el comportamiento real de Play contra las
+     * grabaciones de referencia (00Az.csv, 038.csv) cuando el matching da
+     * resultados peores de lo esperado.
+     */
+    private val playSessionLogger = PlaySessionLogger()
+
+    /** Ultima ruta donde se guardo el log de Play (para mostrar en PlayScreen), o null si aun no se exporto nada. */
+    var lastExportedLogPath by mutableStateOf<String?>(null)
+        private set
+
+    private fun startPlaySession() {
+        playSessionLogger.reset()
+        sensorListener.sessionLogger = playSessionLogger
+        lastExportedLogPath = null
+        screen = AppScreen.PLAY
+    }
+
     fun onPlayHit(roll: Double, azimuth: Double?) {
         val az = azimuth ?: return // sin azimuth (gesto demasiado rapido/corto) no se puede posicionar: se ignora este golpe para el disparo de sonido
         val closest = PositionMatcher.closestPosition(roll, az, calibratedPositions) ?: return
         playHitCounter += 1
         playedHits = (playedHits + PlayedHit(playHitCounter, closest.piece, roll, az)).takeLast(50)
+        playSessionLogger.markLastFrameAsHit(closest.piece.displayName)
         audioEngine.play(closest.piece)
     }
 
     fun restartToSetup() {
         detector.reset()
+        // exporta el log de la sesion de Play que termina (si hubo alguna)
+        // ANTES de limpiar/desactivar el logger, con timestamp unico en
+        // Descargas/airpulse-logger/. No bloquea ni falla el flujo si no
+        // hay nada que exportar o si la escritura falla (ver
+        // PlaySessionLogger.writeToDownloads).
+        if (screen == AppScreen.PLAY) {
+            lastExportedLogPath = playSessionLogger.writeToDownloads(getApplication())
+        }
+        sensorListener.sessionLogger = null
         selectedPieces = emptySet()
         calibrationQueue = emptyList()
         calibrationIndex = 0
