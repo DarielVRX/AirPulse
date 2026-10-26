@@ -6,6 +6,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager as AndroidSensorManager
 import com.xdariel.airpulse.engine.AirPulseDetector
+import com.xdariel.airpulse.logging.PlaySessionLogger
 
 /**
  * Puente entre los sensores fisicos de Android y el motor de deteccion
@@ -70,7 +71,27 @@ class AirPulseSensorListener(
     /** Callback opcional para exponer roll/azimuth actuales a la UI (debug). */
     var onOrientationUpdated: ((rollDeg: Double, azimuthDeg: Double) -> Unit)? = null
 
+    /**
+     * Logger opcional (solo activo durante Play, ver AppViewModel): si no
+     * es null, cada frame de accel_x se registra ahi tambien, ademas de
+     * alimentarse al motor de deteccion. No afecta el pipeline de
+     * deteccion en si (solo observa).
+     */
+    var sessionLogger: PlaySessionLogger? = null
+
     fun start() {
+        // SENSOR_DELAY_FASTEST pide la tasa mas alta sin limite ("0
+        // microsegundos" de delay). Desde Android 12 (API 31) eso
+        // requiere el permiso normal HIGH_SAMPLING_RATE_SENSORS en el
+        // manifest -- ya declarado alli. Sin el, el registro del listener
+        // lanza SecurityException y la app crashea al abrir (visto en
+        // pruebas reales). Se usa FASTEST (en vez de un intervalo fijo en
+        // microsegundos) para no limitar artificialmente el hardware real
+        // por debajo de lo que el dispositivo del usuario pueda entregar
+        // -- el acelerometro del Poco M7 4G usado para validar
+        // StreamingAirdrumEngine entregaba ~400-460Hz incluso sin este
+        // permiso (logger previo), asi que el motor ya es robusto a tasas
+        // mayores (procesa frame a frame, sin asumir un intervalo fijo).
         accelerometer?.let {
             sensorManager.registerListener(this, it, AndroidSensorManager.SENSOR_DELAY_FASTEST)
         }
@@ -111,6 +132,7 @@ class AirPulseSensorListener(
         val tMs = event.timestamp / 1_000_000L
         val accelX = event.values[0].toDouble()
 
+        sessionLogger?.logFrame(tMs, accelX, lastRollDeg, lastAzimuthDeg)
         detector.feedFrame(tMs, accelX, lastRollDeg, lastAzimuthDeg)
     }
 
