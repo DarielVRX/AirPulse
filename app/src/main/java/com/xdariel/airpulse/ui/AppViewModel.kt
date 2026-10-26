@@ -71,6 +71,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var calibratedPositions by mutableStateOf<List<CalibratedPosition>>(emptyList())
         private set
 
+    /**
+     * Pieza con la que la ultima calibracion intentada quedo "solapada"
+     * (distancia menor a [PositionMatcher.MIN_SEPARATION_DEG]), o null si
+     * no hay conflicto activo. La UI (CalibrationScreen) usa esto para
+     * mostrar el indicador visual y el mensaje de "repeti el gesto".
+     * Se limpia automaticamente al empezar a recibir golpes de nuevo para
+     * la misma pieza.
+     */
+    var conflictWithPiece by mutableStateOf<DrumPiece?>(null)
+        private set
+
     // acumuladores circulares/lineales de los golpes recibidos para la pieza actual
     private val currentRolls = mutableListOf<Double>()
     private val currentAzimuths = mutableListOf<Double>()
@@ -86,6 +97,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         currentRolls.clear()
         currentAzimuths.clear()
         hitsForCurrentPiece = 0
+        conflictWithPiece = null
         // NO se llama detector.reset() aqui: eso borraria lastHit del motor
         // de golpes justo en la transicion entre piezas, que es donde mas
         // falta hace el filtro anti-rebote (el golpe de cierre de una pieza
@@ -116,7 +128,24 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             } else {
                 0.0
             }
-            calibratedPositions = calibratedPositions + CalibratedPosition(piece, centerRoll, centerAzimuth)
+            val candidate = CalibratedPosition(piece, centerRoll, centerAzimuth)
+
+            // chequeo anti-solape: si la posicion recien calibrada queda
+            // demasiado cerca de una ya calibrada (ver
+            // PositionMatcher.MIN_SEPARATION_DEG), se descarta y se pide
+            // repetir el gesto para ESTA MISMA pieza en vez de avanzar.
+            // No se empuja/ajusta nada automaticamente: el usuario decide
+            // donde reubicarla.
+            val conflict = PositionMatcher.findConflict(candidate, calibratedPositions)
+            if (conflict != null) {
+                conflictWithPiece = conflict.piece
+                currentRolls.clear()
+                currentAzimuths.clear()
+                hitsForCurrentPiece = 0
+                return
+            }
+
+            calibratedPositions = calibratedPositions + candidate
 
             calibrationIndex += 1
             if (calibrationIndex >= calibrationQueue.size) {
